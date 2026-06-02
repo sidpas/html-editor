@@ -323,23 +323,14 @@
 
   .bar-faq {
     font-size: 13.5px;
-    font-weight: 500;
-    color: var(--text-2);
+    font-weight: 600;
+    color: var(--text);
     text-decoration: none;
     white-space: nowrap;
   }
-  .bar-faq:hover { color: var(--text); }
+  .bar-faq:hover { color: var(--accent); }
 
-  .faq-link {
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-2);
-    text-decoration: none;
-    align-self: center;
-  }
-  .faq-link:hover { color: var(--text); }
-
-  /* Mini browser (hero right) */
+/* Mini browser (hero right) */
   .hero-right { flex-shrink: 0; width: 400px; max-width: 44vw; }
 
   .hint-browser {
@@ -517,7 +508,7 @@
     <button id="saveBtn" disabled>Save</button>
     <button id="saveAsBtn" disabled>Save As…</button>
     <div class="sep"></div>
-    <a class="bar-faq" href="/faq.html" target="_blank" rel="noopener">FAQ</a>
+    <a class="bar-faq" href="/faq.html" target="_blank" rel="noopener">FAQs</a>
   </div>
   <div id="unsupported">⚠ Your browser can't save files directly. Use Chrome or Edge for full save support. You can still open &amp; download via Save As.</div>
   <div id="frameWrap">
@@ -531,7 +522,6 @@
           <p>Built something with Claude, Cursor, or v0? Open the file, click to edit, save it back — no re-prompting, no code editor.</p>
           <div class="hero-btns">
             <button class="btn-primary" id="openBtn2">Open HTML file</button>
-            <a class="faq-link" href="/faq.html" target="_blank" rel="noopener">FAQ</a>
           </div>
         </div>
         <div class="hero-right">
