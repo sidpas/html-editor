@@ -682,14 +682,18 @@ function changeFontSize(delta) {
   const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
   const current = parseInt(iframe.contentWindow.getComputedStyle(el).fontSize) || 16;
   const next = Math.max(8, Math.min(96, current + delta));
-  const span = doc.createElement('span');
-  span.style.fontSize = next + 'px';
-  span.appendChild(range.extractContents());
-  range.insertNode(span);
-  const newRange = doc.createRange();
-  newRange.selectNodeContents(span);
-  sel.removeAllRanges();
-  sel.addRange(newRange);
+  if (el.tagName === 'SPAN' && el.style.fontSize) {
+    el.style.fontSize = next + 'px';
+  } else {
+    const span = doc.createElement('span');
+    span.style.fontSize = next + 'px';
+    span.appendChild(range.extractContents());
+    range.insertNode(span);
+    const newRange = doc.createRange();
+    newRange.selectNodeContents(span);
+    sel.removeAllRanges();
+    sel.addRange(newRange);
+  }
   $('fontSzDisp').textContent = next + 'px';
   markDirty();
 }
