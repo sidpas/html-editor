@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML Inline Editor</title>
+<style>
+  :root { --bar: #1e1e2e; --accent: #7c6cff; --ok: #3fbf7f; --warn: #e0a030; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+  body { display: flex; flex-direction: column; }
+  #toolbar {
+    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
+    background: var(--bar); color: #fff; flex: 0 0 auto; flex-wrap: wrap;
+  }
+  #toolbar .spacer { flex: 1; }
+  #toolbar button {
+    background: #2d2d44; color: #fff; border: 1px solid #3d3d5c;
+    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+  }
+  #toolbar button:hover { background: #3d3d5c; }
+  #toolbar button.primary { background: var(--accent); border-color: var(--accent); }
+  #toolbar button:disabled { opacity: .4; cursor: not-allowed; }
+  #status { font-size: 12px; opacity: .85; }
+  #status.dirty { color: var(--warn); }
+  #status.saved { color: var(--ok); }
+  #fname { font-size: 13px; font-weight: 600; }
+  #editToggle.on { background: var(--ok); border-color: var(--ok); }
+  #frameWrap { flex: 1; overflow: auto; background: #f4f4f7; }
+  iframe { width: 100%; height: 100%; border: 0; background: #fff; }
+  .hint { padding: 40px; text-align: center; color: #888; font-size: 14px; line-height: 1.6; }
+  .hint code { background: #eee; padding: 2px 6px; border-radius: 4px; }
+  #unsupported { display:none; background:#e0a030; color:#000; padding:8px 12px; font-size:13px; }
+</style>
+</head>
+<body>
+  <div id="toolbar">
+    <button id="openBtn" class="primary">Open HTML…</button>
+    <button id="editToggle" disabled>Edit: Off</button>
+    <span id="fname"></span>
+    <span class="spacer"></span>
+    <span id="status"></span>
+    <button id="saveBtn" disabled>Save</button>
+    <button id="saveAsBtn" disabled>Save As…</button>
+  </div>
+  <div id="unsupported">⚠ Your browser can't save files directly. Use Chrome or Edge for full open/save. (You can still open & download via Save As.)</div>
+  <div id="frameWrap">
+    <div class="hint">
+      Click <strong>Open HTML…</strong> to load a file.<br>
+      Toggle <strong>Edit</strong>, click any text to change it, then <strong>Save</strong> (⌘S) back to the same file.
+    </div>
+  </div>
+
+<script>
+const supportsFS = 'showOpenFilePicker' in window;
+let fileHandle = null;
+let editing = false;
+let dirty = false;
+
+const $ = id => document.getElementById(id);
+const frameWrap = $('frameWrap');
+let iframe = null;
+
+if (!supportsFS) $('unsupported').style.display = 'block';
+
+function setStatus(msg, cls='') {
+  const s = $('status'); s.textContent = msg; s.className = cls;
+}
+function markDirty() {
+  if (!dirty) { dirty = true; setStatus('● Unsaved changes', 'dirty'); }
+}
+
+function loadHtmlString(html, name) {
+  frameWrap.innerHTML = '';
+  iframe = document.createElement('iframe');
+  frameWrap.appendChild(iframe);
+  const doc = iframe.contentDocument;
+  doc.open(); doc.write(html); doc.close();
+  $('fname').textContent = name || '(untitled)';
+  $('editToggle').disabled = false;
+  $('saveBtn').disabled = false;
+  $('saveAsBtn').disabled = false;
+  dirty = false; editing = false;
+  $('editToggle').textContent = 'Edit: Off';
+  $('editToggle').classList.remove('on');
+  setStatus('Loaded', 'saved');
+  // listen for edits
+  doc.addEventListener('input', markDirty, true);
+}
+
+async function openFile() {
+  if (supportsFS) {
+    try {
+      [fileHandle] = await window.showOpenFilePicker({
+        types: [{ description: 'HTML', accept: { 'text/html': ['.html','.htm'] } }]
+      });
+      const file = await fileHandle.getFile();
+      const text = await file.text();
+      loadHtmlString(text, file.name);
+    } catch(e) { if (e.name !== 'AbortError') alert('Open failed: '+e.message); }
+  } else {
+    const inp = document.createElement('input');
+    inp.type = 'file'; inp.accept = '.html,.htm';
+    inp.onchange = async () => {
+      const f = inp.files[0];
+      if (!f) return;
+      loadHtmlString(await f.text(), f.name);
+      fileHandle = null;
+    };
+    inp.click();
+  }
+}
+
+function toggleEdit() {
+  if (!iframe) return;
+  editing = !editing;
+  const body = iframe.contentDocument.body;
+  body.contentEditable = editing ? 'true' : 'false';
+  body.style.outline = editing ? '2px dashed #7c6cff' : 'none';
+  $('editToggle').textContent = 'Edit: ' + (editing ? 'On' : 'Off');
+  $('editToggle').classList.toggle('on', editing);
+  if (editing) body.focus();
+}
+
+function currentHtml() {
+  const doc = iframe.contentDocument;
+  // strip contenteditable artifacts before saving
+  const clone = doc.documentElement.cloneNode(true);
+  clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
+  const b = clone.querySelector('body');
+  if (b) b.style.outline = '';
+  return '<!DOCTYPE html>\n' + clone.outerHTML;
+}
+
+async function save() {
+  if (!iframe) return;
+  const html = currentHtml();
+  if (supportsFS && fileHandle) {
+    try {
+      const w = await fileHandle.createWritable();
+      await w.write(html); await w.close();
+      dirty = false; setStatus('✓ Saved', 'saved');
+    } catch(e) { alert('Save failed: '+e.message); }
+  } else {
+    saveAs();
+  }
+}
+
+async function saveAs() {
+  if (!iframe) return;
+  const html = currentHtml();
+  if (supportsFS) {
+    try {
+      const h = await window.showSaveFilePicker({
+        suggestedName: ($('fname').textContent || 'edited') + '',
+        types: [{ description: 'HTML', accept: { 'text/html': ['.html'] } }]
+      });
+      const w = await h.createWritable();
+      await w.write(html); await w.close();
+      fileHandle = h;
+      $('fname').textContent = h.name;
+      dirty = false; setStatus('✓ Saved', 'saved');
+    } catch(e) { if (e.name !== 'AbortError') alert('Save failed: '+e.message); }
+  } else {
+    const blob = new Blob([html], { type: 'text/html' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = $('fname').textContent || 'edited.html';
+    a.click(); URL.revokeObjectURL(a.href);
+    setStatus('✓ Downloaded', 'saved');
+  }
+}
+
+$('openBtn').onclick = openFile;
+$('editToggle').onclick = toggleEdit;
+$('saveBtn').onclick = save;
+$('saveAsBtn').onclick = saveAs;
+
+window.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') { e.preventDefault(); save(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'o') { e.preventDefault(); openFile(); }
+  if ((e.metaKey || e.ctrlKey) && e.key === 'e') { e.preventDefault(); toggleEdit(); }
+});
+window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue=''; } });
+</script>
+</body>
+</html>
