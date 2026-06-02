@@ -462,7 +462,7 @@
           <h1>The fastest way to tweak<br>AI-generated HTML.</h1>
           <p>Built something with Claude, Cursor, or v0? Open the file, click to edit, save it back — no re-prompting, no code editor.</p>
           <div class="hero-btns">
-            <button class="btn-primary" onclick="openFile()">Open HTML file</button>
+            <button class="btn-primary" id="openBtn2">Open HTML file</button>
           </div>
         </div>
         <div class="hero-right">
@@ -622,6 +622,7 @@ async function saveAs() {
 }
 
 $('openBtn').onclick = openFile;
+$('openBtn2').onclick = openFile;
 $('editToggle').onclick = toggleEdit;
 $('saveBtn').onclick = save;
 $('saveAsBtn').onclick = saveAs;
