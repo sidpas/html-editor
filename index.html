@@ -7,6 +7,8 @@
 <title>HTML Editor — The fastest way to tweak AI-generated HTML</title>
 <meta name="description" content="Built something with Claude, Cursor, or v0? Open the file, click to edit text directly on the page, and save it back. No re-prompting, no code editor needed.">
 <meta name="robots" content="index, follow">
+<meta name="referrer" content="strict-origin-when-cross-origin">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline'; object-src 'none'; base-uri 'self';">
 <link rel="canonical" href="https://html-edit.com/">
 <link rel="icon" type="image/svg+xml" href="/favicon.svg">
 <link rel="sitemap" type="application/xml" href="/sitemap.xml">
@@ -490,6 +492,7 @@
   </div>
 
 <script>
+(function() {
 const supportsFS = 'showOpenFilePicker' in window;
 let fileHandle = null;
 let editing = false;
@@ -619,6 +622,7 @@ window.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'e') { e.preventDefault(); toggleEdit(); }
 });
 window.addEventListener('beforeunload', e => { if (dirty) { e.preventDefault(); e.returnValue=''; } });
+})();
 </script>
 </body>
 </html>
