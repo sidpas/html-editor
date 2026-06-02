@@ -81,9 +81,8 @@ function loadHtmlString(html, name) {
   $('saveBtn').disabled = false;
   $('saveAsBtn').disabled = false;
   dirty = false; editing = false;
-  $('editToggle').textContent = 'Edit: Off';
-  $('editToggle').classList.remove('on');
   setStatus('Loaded', 'saved');
+  toggleEdit();
   // listen for edits
   doc.addEventListener('input', markDirty, true);
 }
