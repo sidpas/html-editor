@@ -182,32 +182,48 @@
   #status.dirty { color: var(--warn); }
   #status.saved { color: var(--ok); }
 
-  /* ── Font size controls ─────────────────────── */
-  #fontCtrl {
+  /* ── Font size popup ────────────────────────── */
+  #fontPopup {
+    position: fixed;
     display: none;
     align-items: center;
     gap: 2px;
-    margin-right: 4px;
+    background: #1c1c1e;
+    border-radius: 9px;
+    padding: 5px 6px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.25);
+    z-index: 1000;
+    transform: translateX(-50%);
+    pointer-events: all;
   }
-  #fontCtrl button {
-    height: 28px;
-    width: 30px;
+  #fontPopup::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: #1c1c1e;
+  }
+  #fontPopup button {
+    height: 26px;
+    width: 28px;
     padding: 0;
+    border: none;
+    background: transparent;
+    color: #fff;
     font-size: 12px;
     font-weight: 700;
-    border-radius: 6px;
-    border: 1px solid var(--border);
-    background: #fff;
-    color: var(--text);
     cursor: pointer;
+    border-radius: 5px;
     font-family: inherit;
-    transition: background 0.12s, border-color 0.12s;
+    transition: background 0.1s;
   }
-  #fontCtrl button:hover { background: #f9fafb; border-color: #d1d5db; }
+  #fontPopup button:hover { background: rgba(255,255,255,0.15); }
   #fontSzDisp {
     font-size: 12px;
     font-weight: 600;
-    color: var(--text-2);
+    color: rgba(255,255,255,0.6);
     min-width: 36px;
     text-align: center;
     font-variant-numeric: tabular-nums;
@@ -495,11 +511,6 @@
     <button id="openBtn">Open HTML…</button>
     <span id="fname"></span>
     <span class="spacer"></span>
-    <div id="fontCtrl">
-      <button id="fontDecr" title="Decrease font size">A−</button>
-      <span id="fontSzDisp">—</span>
-      <button id="fontIncr" title="Increase font size">A+</button>
-    </div>
     <span id="status"></span>
     <button id="editToggle" disabled>Edit: Off</button>
     <button id="saveBtn" disabled>Save</button>
@@ -548,6 +559,12 @@
     </div>
   </div>
 
+<div id="fontPopup">
+  <button id="fontDecr" title="Decrease font size">A−</button>
+  <span id="fontSzDisp">—</span>
+  <button id="fontIncr" title="Increase font size">A+</button>
+</div>
+
 <script>
 (function() {
 const supportsFS = 'showOpenFilePicker' in window;
@@ -582,15 +599,8 @@ function loadHtmlString(html, name) {
   setStatus('Loaded', 'saved');
   toggleEdit();
   doc.addEventListener('input', markDirty, true);
-  doc.addEventListener('selectionchange', () => {
-    if (!editing) return;
-    const sel = doc.getSelection();
-    if (!sel || !sel.rangeCount) return;
-    const node = sel.focusNode;
-    const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
-    const sz = parseInt(iframe.contentWindow.getComputedStyle(el).fontSize);
-    $('fontSzDisp').textContent = sz ? sz + 'px' : '—';
-  });
+  doc.addEventListener('mouseup', showFontPopup);
+  doc.addEventListener('mousedown', hideFontPopup);
 }
 
 async function openFile() {
@@ -629,14 +639,37 @@ function toggleEdit() {
   body.style.outline = editing ? '2px dashed #7c6cff' : 'none';
   $('editToggle').textContent = 'Edit: ' + (editing ? 'On' : 'Off');
   $('editToggle').classList.toggle('on', editing);
-  $('fontCtrl').style.display = editing ? 'flex' : 'none';
   if (editing) {
     body.addEventListener('keydown', _navKeyGuard);
     body.focus();
   } else {
     body.removeEventListener('keydown', _navKeyGuard);
-    $('fontSzDisp').textContent = '—';
+    hideFontPopup();
   }
+}
+
+function hideFontPopup() {
+  $('fontPopup').style.display = 'none';
+}
+
+function showFontPopup() {
+  if (!editing || !iframe) return;
+  const doc = iframe.contentDocument;
+  const sel = doc.getSelection();
+  if (!sel || !sel.rangeCount || sel.isCollapsed) { hideFontPopup(); return; }
+  const range = sel.getRangeAt(0);
+  const selRect = range.getBoundingClientRect();
+  const iframeRect = iframe.getBoundingClientRect();
+  const node = sel.focusNode;
+  const el = node.nodeType === Node.TEXT_NODE ? node.parentElement : node;
+  const sz = parseInt(iframe.contentWindow.getComputedStyle(el).fontSize);
+  $('fontSzDisp').textContent = sz ? sz + 'px' : '—';
+  const popup = $('fontPopup');
+  const left = iframeRect.left + selRect.left + selRect.width / 2;
+  const top = iframeRect.top + selRect.top - 46;
+  popup.style.left = left + 'px';
+  popup.style.top = Math.max(8, top) + 'px';
+  popup.style.display = 'flex';
 }
 
 function changeFontSize(delta) {
@@ -708,6 +741,7 @@ async function saveAs() {
 
 $('openBtn').onclick = openFile;
 $('openBtn2').onclick = openFile;
+$('fontPopup').addEventListener('mousedown', e => e.preventDefault());
 $('fontDecr').onclick = () => changeFontSize(-2);
 $('fontIncr').onclick = () => changeFontSize(2);
 $('editToggle').onclick = toggleEdit;
