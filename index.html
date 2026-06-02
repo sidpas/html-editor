@@ -3,51 +3,446 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HTML Inline Editor</title>
+<title>HTML Editor</title>
 <style>
-  :root { --bar: #1e1e2e; --accent: #7c6cff; --ok: #3fbf7f; --warn: #e0a030; }
+  :root {
+    --accent: #7c6cff;
+    --accent-h: #6a58f0;
+    --ok: #059669;
+    --warn: #d97706;
+    --text: #111827;
+    --text-2: #6b7280;
+    --border: #e5e7eb;
+    --bar-h: 60px;
+  }
+
   * { box-sizing: border-box; }
-  html, body { margin: 0; height: 100%; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
-  body { display: flex; flex-direction: column; }
+  html, body {
+    margin: 0; height: 100%;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", sans-serif;
+  }
+  body { display: flex; flex-direction: column; background: #fff; }
+
+  /* ── Toolbar / Nav ─────────────────────────── */
   #toolbar {
-    display: flex; align-items: center; gap: 8px; padding: 8px 12px;
-    background: var(--bar); color: #fff; flex: 0 0 auto; flex-wrap: wrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 24px;
+    height: var(--bar-h);
+    background: #fff;
+    border-bottom: 1px solid var(--border);
+    flex: 0 0 auto;
+    z-index: 10;
   }
-  #toolbar .spacer { flex: 1; }
+
+  .bar-brand {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+
+  .bar-logo { flex-shrink: 0; display: flex; }
+
+  .bar-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+
+  .sep {
+    width: 1px; height: 20px;
+    background: var(--border);
+    margin: 0 4px;
+    flex-shrink: 0;
+  }
+
+  .spacer { flex: 1; }
+
+  #fname {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-2);
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   #toolbar button {
-    background: #2d2d44; color: #fff; border: 1px solid #3d3d5c;
-    padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 13px;
+    height: 34px;
+    padding: 0 14px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    font-family: inherit;
+    font-size: 13.5px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    background: #fff;
+    color: var(--text);
+    transition: background 0.12s, border-color 0.12s;
   }
-  #toolbar button:hover { background: #3d3d5c; }
-  #toolbar button.primary { background: var(--accent); border-color: var(--accent); }
-  #toolbar button:disabled { opacity: .4; cursor: not-allowed; }
-  #status { font-size: 12px; opacity: .85; }
+
+  #toolbar button:hover:not(:disabled) {
+    background: #f9fafb;
+    border-color: #d1d5db;
+  }
+
+  #toolbar button:disabled { opacity: 0.35; cursor: not-allowed; }
+
+  #openBtn {
+    background: var(--accent);
+    border-color: var(--accent);
+    color: #fff;
+    font-weight: 600;
+  }
+  #openBtn:hover:not(:disabled) {
+    background: var(--accent-h);
+    border-color: var(--accent-h);
+  }
+
+  #editToggle {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  #editToggle::before {
+    content: '';
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #d1d5db;
+    flex-shrink: 0;
+    transition: background 0.2s;
+  }
+
+  #editToggle.on {
+    background: #ecfdf5;
+    border-color: #6ee7b7;
+    color: #065f46;
+  }
+
+  #editToggle.on::before { background: var(--ok); }
+
+  #status {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-2);
+  }
   #status.dirty { color: var(--warn); }
   #status.saved { color: var(--ok); }
-  #fname { font-size: 13px; font-weight: 600; }
-  #editToggle.on { background: var(--ok); border-color: var(--ok); }
-  #frameWrap { flex: 1; overflow: auto; background: #f4f4f7; }
-  iframe { width: 100%; height: 100%; border: 0; background: #fff; }
-  .hint { padding: 40px; text-align: center; color: #888; font-size: 14px; line-height: 1.6; }
-  .hint code { background: #eee; padding: 2px 6px; border-radius: 4px; }
-  #unsupported { display:none; background:#e0a030; color:#000; padding:8px 12px; font-size:13px; }
+
+  /* ── Frame ─────────────────────────────────── */
+  #frameWrap { flex: 1; overflow: auto; background: #f9fafb; }
+  iframe { width: 100%; height: 100%; border: 0; display: block; }
+
+  /* ── Empty state ───────────────────────────── */
+  .hint {
+    min-height: calc(100vh - var(--bar-h));
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  /* Hero */
+  .hint-hero {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 48px 48px 32px;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 64px;
+  }
+
+  .hero-left { flex: 1; }
+
+  .hero-eyebrow {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+
+  .hero-left h1 {
+    font-size: clamp(28px, 3.5vw, 44px);
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.03em;
+    line-height: 1.1;
+    margin: 0 0 16px;
+  }
+
+  .hero-left p {
+    font-size: 16px;
+    color: var(--text-2);
+    line-height: 1.65;
+    margin: 0 0 28px;
+    max-width: 380px;
+  }
+
+  .hero-btns { display: flex; gap: 12px; flex-wrap: wrap; }
+
+  .btn-primary {
+    height: 46px;
+    padding: 0 26px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    letter-spacing: -0.01em;
+    transition: background 0.13s, transform 0.1s, box-shadow 0.13s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.12);
+  }
+
+  .btn-primary:hover {
+    background: var(--accent-h);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(124,108,255,0.35);
+  }
+
+  .btn-outline {
+    height: 46px;
+    padding: 0 26px;
+    background: #fff;
+    color: var(--text);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+  }
+
+  .btn-outline:hover { background: #f9fafb; border-color: #d1d5db; }
+
+  /* Mini browser (hero right) */
+  .hero-right { flex-shrink: 0; width: 400px; max-width: 44vw; }
+
+  .hint-browser {
+    background: #fff;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 0 0 1px rgba(0,0,0,0.07), 0 8px 24px rgba(0,0,0,0.09), 0 24px 56px rgba(0,0,0,0.06);
+  }
+
+  .hb-bar {
+    background: #f9fafb;
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hb-dots { display: flex; gap: 5px; }
+  .hb-dots span { width: 10px; height: 10px; border-radius: 50%; display: block; }
+  .hb-dots span:nth-child(1) { background: #ff5f57; }
+  .hb-dots span:nth-child(2) { background: #febc2e; }
+  .hb-dots span:nth-child(3) { background: #28c840; }
+
+  .hb-url {
+    flex: 1;
+    font-size: 11px;
+    color: var(--text-2);
+    text-align: center;
+    background: var(--border);
+    border-radius: 5px;
+    padding: 2px 10px;
+    opacity: 0.7;
+  }
+
+  .hb-badge {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ok);
+    background: #ecfdf5;
+    border: 1px solid #6ee7b7;
+    border-radius: 20px;
+    padding: 2px 8px;
+    white-space: nowrap;
+  }
+
+  .hb-body { padding: 22px 20px 26px; }
+
+  .hb-h1 {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    display: inline-block;
+    margin-bottom: 16px;
+    outline: 2px dashed var(--accent);
+    outline-offset: 4px;
+    border-radius: 3px;
+    padding: 0 2px;
+    background: rgba(124,108,255,0.04);
+    animation: editPulse 2.5s ease-in-out infinite;
+  }
+
+  .hb-cursor {
+    display: inline-block;
+    width: 2px;
+    height: 16px;
+    background: var(--accent);
+    vertical-align: text-bottom;
+    margin-left: 2px;
+    animation: blink 1s step-end infinite;
+  }
+
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+  @keyframes editPulse {
+    0%,100% { outline-color: var(--accent); }
+    50%     { outline-color: rgba(124,108,255,0.28); }
+  }
+
+  .hb-line { height: 9px; border-radius: 5px; background: #e5e7eb; margin-bottom: 9px; }
+  .hb-line.s  { width: 68%; }
+  .hb-line.xs { width: 44%; margin-bottom: 0; }
+
+  .hint-keys {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 0 48px 56px;
+    border-top: 1px solid var(--border);
+    padding-top: 32px;
+  }
+
+  .hint-keys span {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: var(--text-2);
+  }
+
+  kbd {
+    display: inline-block;
+    background: #fff;
+    border: 1px solid var(--border);
+    border-bottom: 2px solid #d1d5db;
+    border-radius: 6px;
+    padding: 4px 11px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ── Unsupported banner ─────────────────────── */
+  #unsupported {
+    display: none;
+    background: #fef3c7;
+    border-bottom: 1px solid #fde68a;
+    color: #92400e;
+    padding: 10px 24px;
+    font-size: 13px;
+  }
+
+  @media (max-width: 900px) {
+    .hint-hero { gap: 40px; padding: 40px 40px 28px; }
+    .hero-right { width: 320px; }
+  }
+
+  @media (max-width: 680px) {
+    .hint-hero {
+      flex-direction: column;
+      padding: 40px 24px 24px;
+      gap: 32px;
+      text-align: center;
+    }
+    .hero-eyebrow { text-align: center; }
+    .hero-left p { max-width: 100%; }
+    .hero-btns { justify-content: center; }
+    .hero-right { width: 100%; max-width: 380px; }
+    .hint-keys { padding: 24px 24px 36px; gap: 14px; }
+  }
+
+  @media (max-width: 440px) {
+    .hero-right { display: none; }
+    .bar-name { display: none; }
+    .hint-hero { padding: 32px 20px 20px; }
+    .hint-keys { gap: 10px; padding: 20px 20px 28px; }
+  }
 </style>
 </head>
 <body>
   <div id="toolbar">
-    <button id="openBtn" class="primary">Open HTML…</button>
-    <button id="editToggle" disabled>Edit: Off</button>
+    <div class="bar-brand">
+      <div class="bar-logo">
+        <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <defs>
+            <linearGradient id="lg" x1="4" y1="8" x2="28" y2="24" gradientUnits="userSpaceOnUse">
+              <stop stop-color="#7c6cff"/>
+              <stop offset="1" stop-color="#b39dff"/>
+            </linearGradient>
+          </defs>
+          <path d="M13 8L5 16L13 24" stroke="url(#lg)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 8L27 16L19 24" stroke="url(#lg)" stroke-width="2.75" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M19 8L13 24" stroke="url(#lg)" stroke-width="2" stroke-linecap="round" opacity="0.65"/>
+        </svg>
+      </div>
+      <span class="bar-name">HTML Editor</span>
+    </div>
+    <div class="sep"></div>
     <span id="fname"></span>
     <span class="spacer"></span>
     <span id="status"></span>
+    <button id="editToggle" disabled>Edit: Off</button>
     <button id="saveBtn" disabled>Save</button>
     <button id="saveAsBtn" disabled>Save As…</button>
+    <button id="openBtn">Open HTML…</button>
   </div>
-  <div id="unsupported">⚠ Your browser can't save files directly. Use Chrome or Edge for full open/save. (You can still open & download via Save As.)</div>
+  <div id="unsupported">⚠ Your browser can't save files directly. Use Chrome or Edge for full save support. You can still open &amp; download via Save As.</div>
   <div id="frameWrap">
     <div class="hint">
-      Click <strong>Open HTML…</strong> to load a file.<br>
-      Toggle <strong>Edit</strong>, click any text to change it, then <strong>Save</strong> (⌘S) back to the same file.
+
+      <!-- Hero: left text + right browser preview -->
+      <div class="hint-hero">
+        <div class="hero-left">
+          <p class="hero-eyebrow">HTML Editor</p>
+          <h1>Edit HTML files<br>in your browser.</h1>
+          <p>Open any local file, click to edit text directly on the page, then save it back to disk. No installs, no server.</p>
+          <div class="hero-btns">
+            <button class="btn-primary" onclick="openFile()">Open HTML file</button>
+          </div>
+        </div>
+        <div class="hero-right">
+          <div class="hint-browser">
+            <div class="hb-bar">
+              <div class="hb-dots"><span></span><span></span><span></span></div>
+              <div class="hb-url">my-page.html</div>
+              <div class="hb-badge">● Edit: On</div>
+            </div>
+            <div class="hb-body">
+              <div class="hb-h1">Welcome to my site<span class="hb-cursor"></span></div>
+              <div class="hb-line"></div>
+              <div class="hb-line s"></div>
+              <div class="hb-line xs"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="hint-keys">
+        <span><kbd>⌘O</kbd> Open</span>
+        <span><kbd>⌘E</kbd> Edit</span>
+        <span><kbd>⌘S</kbd> Save</span>
+      </div>
+
     </div>
   </div>
 

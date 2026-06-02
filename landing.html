@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HTML Editor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ink:    #1a1a1a;
+    --paper:  #f5f0e8;
+    --rule:   rgba(120, 140, 200, 0.11);
+    --margin: rgba(220, 70, 70, 0.16);
+    --muted:  #7d7060;
+    --red:    #d43a28;
+  }
+
+  body {
+    background-color: var(--paper);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0,
+      transparent 35px,
+      var(--rule) 35px,
+      var(--rule) 36px
+    );
+    color: var(--ink);
+    font-family: 'Caveat', cursive;
+    min-height: 100vh;
+    padding: 56px 28px 88px;
+  }
+
+  /* red margin line */
+  @media (min-width: 560px) {
+    body::before {
+      content: '';
+      position: fixed;
+      left: 58px;
+      top: 0; bottom: 0;
+      width: 1.5px;
+      background: var(--margin);
+      pointer-events: none;
+    }
+  }
+
+  /* hidden SVG filter */
+  .defs { position: absolute; width: 0; height: 0; overflow: hidden; }
+
+  /* ─── LAYOUT ─────────────────────────────────── */
+  .page {
+    max-width: 500px;
+    margin: 0 auto;
+  }
+
+  /* staggered reveal */
+  [data-s] { opacity: 0; animation: up 0.4s ease forwards; }
+  [data-s="1"] { animation-delay: 0.08s; }
+  [data-s="2"] { animation-delay: 0.22s; }
+  [data-s="3"] { animation-delay: 0.38s; }
+  [data-s="4"] { animation-delay: 0.54s; }
+  [data-s="5"] { animation-delay: 0.70s; }
+  [data-s="6"] { animation-delay: 0.86s; }
+
+  @keyframes up {
+    from { opacity: 0; transform: translateY(7px); }
+    to   { opacity: 1; transform: none; }
+  }
+
+  /* ─── PIECES ─────────────────────────────────── */
+  .eyebrow {
+    font-size: 1.15rem;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  .title {
+    font-size: clamp(2.8rem, 9vw, 4rem);
+    font-weight: 700;
+    line-height: 1.08;
+    margin-bottom: 4px;
+  }
+
+  /* animated wavy underline */
+  .underline {
+    width: 100%;
+    max-width: 320px;
+    height: 13px;
+    display: block;
+    margin-bottom: 30px;
+  }
+
+  .upath {
+    fill: none;
+    stroke: var(--ink);
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 360;
+    stroke-dashoffset: 360;
+    animation: draw 0.7s ease forwards 0.3s;
+  }
+
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+
+  .desc {
+    font-size: 1.35rem;
+    line-height: 1.7;
+    color: var(--muted);
+    margin-bottom: 42px;
+    max-width: 400px;
+  }
+
+  /* feature list */
+  .feats {
+    list-style: none;
+    margin-bottom: 48px;
+    border-top: 1.5px solid rgba(0,0,0,0.08);
+  }
+
+  .feats li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    font-size: 1.3rem;
+    padding: 11px 0;
+    border-bottom: 1.5px solid rgba(0,0,0,0.08);
+    filter: url(#sketch);
+  }
+
+  .feats svg {
+    flex-shrink: 0;
+    width: 26px;
+    height: 26px;
+  }
+
+  /* CTA */
+  .cta-row {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    flex-wrap: wrap;
+  }
+
+  .cta {
+    display: inline-block;
+    font-family: 'Caveat', cursive;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--red);
+    text-decoration: none;
+    padding: 9px 26px 11px;
+    border-radius: 3px;
+    transform: rotate(-0.6deg);
+    box-shadow: 3px 3px 0 rgba(0,0,0,0.12);
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    filter: url(#sketch);
+  }
+
+  .cta:hover {
+    transform: rotate(0deg) translateY(-2px);
+    box-shadow: 4px 5px 0 rgba(0,0,0,0.15);
+  }
+
+  .cta-sub {
+    font-size: 1.05rem;
+    color: var(--muted);
+  }
+
+  .foot {
+    margin-top: 68px;
+    font-size: 1rem;
+    color: var(--muted);
+    opacity: 0.55;
+  }
+</style>
+</head>
+<body>
+
+<!-- SVG filter: roughens edges slightly to feel hand-drawn -->
+<svg class="defs">
+  <defs>
+    <filter id="sketch" x="-4%" y="-4%" width="108%" height="108%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="5" seed="7" result="n"/>
+      <feDisplacementMap in="SourceGraphic" in2="n" scale="2" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+  </defs>
+</svg>
+
+<div class="page">
+
+  <p class="eyebrow" data-s="1">// html-editor</p>
+
+  <h1 class="title" data-s="2">Edit HTML<br>in the browser.</h1>
+
+  <svg class="underline" data-s="2" viewBox="0 0 320 13" preserveAspectRatio="none">
+    <path class="upath" d="M0 9 Q40 4 80 9 Q120 14 160 8 Q200 2 240 8 Q280 13 320 8"/>
+  </svg>
+
+  <p class="desc" data-s="3">
+    Open any local HTML file, edit it directly<br>
+    in the page, and save it back. That's it.
+  </p>
+
+  <ul class="feats" data-s="4">
+    <li>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7 Q3.5 6 4 5 L9 3.5 Q10 3 11 4 L13 7 L21 7 Q22 7 22 8 L22 21 Q22 22 21 22 L5 22 Q4 22 4 21 Z"/>
+        <path d="M13 11 L13 18 M10 15.5 L13 18 L16 15.5"/>
+      </svg>
+      open any .html file from your computer
+    </li>
+    <li>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M5 19 L7 13.5 L17 3.5 Q19 1.5 21 3.5 L22.5 5 Q24.5 7 22.5 9 L12.5 19 Z"/>
+        <path d="M7 13.5 L12.5 19"/>
+        <path d="M3.5 22.5 L7 21"/>
+      </svg>
+      click to edit — dashed outline appears live
+    </li>
+    <li>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2.5" y="7" width="21" height="13" rx="2.5"/>
+        <path d="M7 12 h2.5 M12 12 h2.5 M17 12 h2.5 M7 16 h12"/>
+      </svg>
+      ⌘E &nbsp;to toggle edit mode
+    </li>
+    <li>
+      <svg viewBox="0 0 26 26" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 3.5 L18.5 3.5 L22.5 7.5 L22.5 22.5 L4 22.5 Z"/>
+        <path d="M8.5 3.5 L8.5 9.5 L17.5 9.5 L17.5 3.5"/>
+        <rect x="7.5" y="14" width="11" height="8.5"/>
+      </svg>
+      save or save as when you're done
+    </li>
+  </ul>
+
+  <div class="cta-row" data-s="5">
+    <a href="index.html" class="cta">open the editor →</a>
+    <span class="cta-sub">Chrome &amp; Edge</span>
+  </div>
+
+  <p class="foot" data-s="6">one file &nbsp;·&nbsp; no installs &nbsp;·&nbsp; open source</p>
+
+</div>
+
+</body>
+</html>
