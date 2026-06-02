@@ -686,6 +686,10 @@ function changeFontSize(delta) {
   span.style.fontSize = next + 'px';
   span.appendChild(range.extractContents());
   range.insertNode(span);
+  const newRange = doc.createRange();
+  newRange.selectNodeContents(span);
+  sel.removeAllRanges();
+  sel.addRange(newRange);
   $('fontSzDisp').textContent = next + 'px';
   markDirty();
 }
