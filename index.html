@@ -551,6 +551,11 @@ async function openFile() {
   }
 }
 
+function _navKeyGuard(e) {
+  if (['Space','ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.code))
+    e.stopPropagation();
+}
+
 function toggleEdit() {
   if (!iframe) return;
   editing = !editing;
@@ -559,7 +564,12 @@ function toggleEdit() {
   body.style.outline = editing ? '2px dashed #7c6cff' : 'none';
   $('editToggle').textContent = 'Edit: ' + (editing ? 'On' : 'Off');
   $('editToggle').classList.toggle('on', editing);
-  if (editing) body.focus();
+  if (editing) {
+    body.addEventListener('keydown', _navKeyGuard);
+    body.focus();
+  } else {
+    body.removeEventListener('keydown', _navKeyGuard);
+  }
 }
 
 function currentHtml() {
