@@ -182,6 +182,25 @@
   #status.dirty { color: var(--warn); }
   #status.saved { color: var(--ok); }
 
+  /* ── Drag handle ─────────────────────────────── */
+  #dragHandle {
+    position: fixed;
+    display: none;
+    width: 20px;
+    height: 20px;
+    background: #7c6cff;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 13px;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    z-index: 1001;
+    user-select: none;
+    box-shadow: 0 2px 8px rgba(124,108,255,0.4);
+  }
+  #dragHandle:active { cursor: grabbing; }
+
   /* ── Font size popup ────────────────────────── */
   #fontPopup {
     position: fixed;
@@ -559,6 +578,8 @@
     </div>
   </div>
 
+<div id="dragHandle" title="Drag to reorder">⠿</div>
+
 <div id="fontPopup">
   <button id="fontDecr" title="Decrease font size">A−</button>
   <span id="fontSzDisp">—</span>
@@ -641,9 +662,11 @@ function toggleEdit() {
   $('editToggle').classList.toggle('on', editing);
   if (editing) {
     body.addEventListener('keydown', _navKeyGuard);
+    initDrag();
     body.focus();
   } else {
     body.removeEventListener('keydown', _navKeyGuard);
+    cleanupDrag();
     hideFontPopup();
   }
 }
@@ -698,13 +721,132 @@ function changeFontSize(delta) {
   markDirty();
 }
 
+// ── Block drag-to-reorder ─────────────────────────
+const DRAG_TAGS = new Set(['DIV','SECTION','ARTICLE','HEADER','FOOTER',
+  'MAIN','ASIDE','P','H1','H2','H3','H4','H5','H6','LI','FIGURE','BLOCKQUOTE','FORM']);
+let dragEl = null, dropTarget = null, dropBefore = true;
+let _lastBlock = null, _hideTimer = null, _overHandle = false;
+
+function initDrag() {
+  if (!iframe) return;
+  const doc = iframe.contentDocument;
+  if (doc.getElementById('__drag_css')) return;
+  const s = doc.createElement('style');
+  s.id = '__drag_css';
+  s.textContent = `.__dragging{opacity:.4!important;pointer-events:none!important}
+    #__drop_line{position:fixed;left:0;right:0;height:3px;background:#7c6cff;
+    pointer-events:none;z-index:99999;box-shadow:0 0 8px rgba(124,108,255,.5);display:none}`;
+  doc.head.appendChild(s);
+  const line = doc.createElement('div');
+  line.id = '__drop_line';
+  doc.body.appendChild(line);
+  doc.addEventListener('mousemove', onIframeMove);
+  iframe.addEventListener('mouseleave', onIframeLeave);
+}
+
+function cleanupDrag() {
+  if (!iframe) return;
+  const doc = iframe.contentDocument;
+  doc.removeEventListener('mousemove', onIframeMove);
+  iframe.removeEventListener('mouseleave', onIframeLeave);
+  doc.getElementById('__drag_css')?.remove();
+  doc.getElementById('__drop_line')?.remove();
+  hideDragHandle();
+  _lastBlock = null;
+}
+
+function findBlock(el) {
+  const body = iframe.contentDocument.body;
+  while (el && el !== body) {
+    if (DRAG_TAGS.has(el.tagName) && el.parentElement?.children.length > 1) return el;
+    el = el.parentElement;
+  }
+  return null;
+}
+
+function onIframeMove(e) {
+  if (dragEl || !editing) return;
+  const block = findBlock(e.target);
+  if (block === _lastBlock) return;
+  _lastBlock = block;
+  block ? positionHandle(block) : hideDragHandle();
+}
+
+function onIframeLeave() {
+  clearTimeout(_hideTimer);
+  _hideTimer = setTimeout(() => {
+    if (!_overHandle) { hideDragHandle(); _lastBlock = null; }
+  }, 80);
+}
+
+function positionHandle(el) {
+  const ir = iframe.getBoundingClientRect();
+  const er = el.getBoundingClientRect();
+  const h = $('dragHandle');
+  h.style.top  = (ir.top  + er.top  + 6) + 'px';
+  h.style.left = (ir.left + er.left + 6) + 'px';
+  h.style.display = 'flex';
+  h._el = el;
+}
+
+function hideDragHandle() {
+  const h = $('dragHandle');
+  h.style.display = 'none';
+  h._el = null;
+}
+
+function startDrag(e) {
+  dragEl = $('dragHandle')._el;
+  if (!dragEl) return;
+  e.preventDefault();
+  hideFontPopup();
+  dragEl.classList.add('__dragging');
+  hideDragHandle();
+  document.addEventListener('mousemove', onDragMove);
+  document.addEventListener('mouseup', onDragEnd);
+}
+
+function onDragMove(e) {
+  if (!dragEl) return;
+  const doc = iframe.contentDocument;
+  const ir = iframe.getBoundingClientRect();
+  const ix = e.clientX - ir.left, iy = e.clientY - ir.top;
+  const line = doc.getElementById('__drop_line');
+  if (ix < 0 || iy < 0 || ix > ir.width || iy > ir.height) {
+    line.style.display = 'none'; dropTarget = null; return;
+  }
+  let el = doc.elementFromPoint(ix, iy);
+  while (el && el.parentElement !== dragEl.parentElement) el = el.parentElement;
+  if (!el || el === dragEl) { line.style.display = 'none'; dropTarget = null; return; }
+  const er = el.getBoundingClientRect();
+  dropBefore = iy < er.top + er.height / 2;
+  dropTarget = el;
+  line.style.top = (ir.top + (dropBefore ? er.top : er.bottom)) + 'px';
+  line.style.display = 'block';
+}
+
+function onDragEnd() {
+  document.removeEventListener('mousemove', onDragMove);
+  document.removeEventListener('mouseup', onDragEnd);
+  if (!dragEl) return;
+  dragEl.classList.remove('__dragging');
+  const line = iframe.contentDocument.getElementById('__drop_line');
+  if (line) line.style.display = 'none';
+  if (dropTarget) {
+    dropTarget.parentElement.insertBefore(dragEl, dropBefore ? dropTarget : dropTarget.nextSibling);
+    markDirty();
+  }
+  dragEl = null; dropTarget = null;
+}
+
 function currentHtml() {
   const doc = iframe.contentDocument;
-  // strip contenteditable artifacts before saving
   const clone = doc.documentElement.cloneNode(true);
   clone.querySelectorAll('[contenteditable]').forEach(el => el.removeAttribute('contenteditable'));
   const b = clone.querySelector('body');
   if (b) b.style.outline = '';
+  clone.getElementById('__drag_css')?.remove();
+  clone.getElementById('__drop_line')?.remove();
   return '<!DOCTYPE html>\n' + clone.outerHTML;
 }
 
@@ -752,6 +894,9 @@ $('openBtn2').onclick = openFile;
 $('fontPopup').addEventListener('mousedown', e => e.preventDefault());
 $('fontDecr').onclick = () => changeFontSize(-2);
 $('fontIncr').onclick = () => changeFontSize(2);
+$('dragHandle').addEventListener('mousedown', startDrag);
+$('dragHandle').addEventListener('mouseenter', () => { _overHandle = true; clearTimeout(_hideTimer); });
+$('dragHandle').addEventListener('mouseleave', () => { _overHandle = false; hideDragHandle(); _lastBlock = null; });
 $('editToggle').onclick = toggleEdit;
 $('saveBtn').onclick = save;
 $('saveAsBtn').onclick = saveAs;
