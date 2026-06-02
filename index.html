@@ -42,6 +42,8 @@
     gap: 9px;
     margin-right: 6px;
     flex-shrink: 0;
+    text-decoration: none;
+    cursor: pointer;
   }
 
   .bar-logo { flex-shrink: 0; display: flex; }
@@ -381,7 +383,7 @@
 </head>
 <body>
   <div id="toolbar">
-    <div class="bar-brand">
+    <a class="bar-brand" href="/">
       <div class="bar-logo">
         <svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
           <defs>
@@ -396,7 +398,7 @@
         </svg>
       </div>
       <span class="bar-name">HTML Editor</span>
-    </div>
+    </a>
     <div class="sep"></div>
     <span id="fname"></span>
     <span class="spacer"></span>
