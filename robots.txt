@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /cdn-cgi/
+
+Sitemap: https://html-edit.com/sitemap.xml
